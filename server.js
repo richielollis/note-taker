@@ -1,18 +1,47 @@
 const express = require("express");
-const notes = require("./db/db.json");
+const path = require("path");
+const fs = require("fs");
 
-console.log(notes);
+// console.log(notes);
 
 const PORT = process.env.PORT || 3001;
 const app = express();
 
-app.get("/notes", (req, res) => {});
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static("public"));
 
-app.get("*", (req, res) => {});
+function loadNotes() {
+  return JSON.parse(
+    fs.readFileSync("./db/db.json", "utf8", function (err, data) {
+      return data;
+    })
+  );
+}
 
-app.get("/api/notes", (req, res) => {});
+// function newNote(notes) {}
 
-app.post("/api/notes", (req, res) => {});
+app.get("/notes", (req, res) => {
+  loadNotes();
+  console.log(typeof loadNotes());
+  res.sendFile(path.join(__dirname, "/public/notes.html"));
+});
+
+app.get("/api/notes", (req, res) => {
+  res.json(loadNotes());
+});
+
+app.post("/api/notes", (req, res) => {
+  if (!req.body.title || !req.body.text) {
+    res.status(400).send("Note title is required.");
+    return;
+  }
+  res.status(200);
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "/public/index.html"));
+});
 
 app.listen(PORT, () => {
   console.log(`API server now on port ${PORT}!`);
