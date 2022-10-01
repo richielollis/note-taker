@@ -2,8 +2,6 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 
-// console.log(notes);
-
 const PORT = process.env.PORT || 3001;
 const app = express();
 
@@ -14,33 +12,60 @@ app.use(express.static("public"));
 function loadNotes() {
   return JSON.parse(
     fs.readFileSync("./db/db.json", "utf8", function (err, data) {
+      if (err) {
+        return;
+      }
       return data;
     })
   );
 }
 
-// function newNote(notes) {}
+function newNote(note) {
+  const notes = loadNotes();
+  note.id = notes.length.toString();
+  notes.push(note);
+  fs.writeFileSync(
+    path.join(__dirname, "./db/db.json"),
+    JSON.stringify(notes, null, 2),
+    (err) => {
+      if (err) throw err;
+    }
+  );
+}
 
 app.get("/notes", (req, res) => {
-  loadNotes();
-  console.log(typeof loadNotes());
   res.sendFile(path.join(__dirname, "/public/notes.html"));
 });
 
 app.get("/api/notes", (req, res) => {
-  res.json(loadNotes());
+  return res.json(loadNotes());
 });
 
 app.post("/api/notes", (req, res) => {
-  if (!req.body.title || !req.body.text) {
-    res.status(400).send("Note title is required.");
-    return;
-  }
-  res.status(200);
+  newNote(req.body);
+  res.end();
 });
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "/public/index.html"));
+});
+
+app.delete("/api/notes/:id", (req, res) => {
+  let id = req.params.id;
+  let notes = loadNotes();
+  notes.splice(id, 1);
+  for (let i = 0; i < notes.length; i++) {
+    notes[i].id = i.toString();
+  }
+  fs.writeFileSync(
+    __dirname + "/db/db.json",
+    JSON.stringify(notes, null, 2),
+    (err) => {
+      if (err) throw err;
+    }
+  );
+
+  res.end();
 });
 
 app.listen(PORT, () => {
